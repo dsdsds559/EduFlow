@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tagebucheinträge</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+  <style>
+    .page-content {
+      padding: 50px 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .input-wrapper {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 500px;
+      gap: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      resize: vertical;
+      font-size: 16px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .mdl-button {
+      align-self: flex-start;
+    }
+
+    .entry-list {
+      width: 100%;
+      max-width: 500px;
+      text-align: left;
+    }
+
+    .entry-item {
+      border-bottom: 1px solid #ccc;
+      padding: 8px 0;
+      position: relative;
+    }
+
+    .entry-date {
+      font-size: 0.85rem;
+      color: gray;
+      margin-bottom: 4px;
+    }
+
+    .delete-btn {
+      cursor: pointer;
+      color: #3f51b5;
+      position: absolute;
+      right: 0;
+      top: 8px;
+      transition: color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      color: red;
+    }
+
+    .mdl-layout__header-row {
+      display: flex;
+      align-items: center;
+    }
+
+    .header-icon {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <i class="material-icons header-icon">menu_book</i>
+        <span class="mdl-layout-title" id="diary-title">Tagebucheinträge</span>
+        <div class="mdl-layout-spacer"></div>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <div class="page-content">
+        <!-- Zurück-Pfeil weiter unten -->
+        <button class="mdl-button mdl-js-button mdl-button--icon" onclick="window.location.href='tagebuch.html'" style="align-self: flex-start;">
+          <i class="material-icons">arrow_back</i>
+        </button>
+
+        <form onsubmit="event.preventDefault(); addEntry();">
+          <div class="input-wrapper">
+            <textarea id="entryfield" placeholder="Neuen Tagebucheintrag schreiben..."></textarea>
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Eintrag speichern
+            </button>
+          </div>
+        </form>
+
+        <div class="entry-list" id="entrylist"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const diaryName = params.get('name') || 'default';
+    const storageKey = `eintraege_${diaryName}`;
+
+    document.getElementById("diary-title").textContent = `Tagebucheinträge: ${diaryName}`;
+
+    document.addEventListener("DOMContentLoaded", loadEntries);
+
+    function loadEntries() {
+      const entries = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const container = document.getElementById("entrylist");
+      container.innerHTML = "";
+
+      entries.forEach(entry => {
+        addEntryElement(entry);
+      });
+    }
+
+    function addEntry() {
+      const textarea = document.getElementById("entryfield");
+      const text = textarea.value.trim();
+      if (!text) return;
+
+      const newEntry = {
+        id: Date.now(),
+        text,
+        date: new Date().toISOString()
+      };
+
+      addEntryElement(newEntry);
+
+      let entries = JSON.parse(localStorage.getItem(storageKey)) || [];
+      entries.push(newEntry);
+      localStorage.setItem(storageKey, JSON.stringify(entries));
+
+      textarea.value = "";
+    }
+
+    function addEntryElement(entry) {
+      const container = document.getElementById("entrylist");
+
+      const div = document.createElement("div");
+      div.className = "entry-item";
+
+      const dateStr = new Date(entry.date).toLocaleString();
+
+      div.innerHTML = `
+        <div class="entry-date">${dateStr}</div>
+        <div class="entry-text">${escapeHtml(entry.text).replace(/\n/g, "<br>")}</div>
+        <i class="material-icons delete-btn" title="Löschen">delete</i>
+      `;
+
+      div.querySelector(".delete-btn").addEventListener("click", () => {
+        deleteEntry(entry.id, div);
+      });
+
+      container.prepend(div);
+    }
+
+    function deleteEntry(id, elem) {
+      let entries = JSON.parse(localStorage.getItem(storageKey)) || [];
+      entries = entries.filter(e => e.id !== id);
+      localStorage.setItem(storageKey, JSON.stringify(entries));
+      elem.remove();
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+  </script>
+</body>
+</html>

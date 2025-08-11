@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tagebücher</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+  <style>
+    .page-content {
+      padding: 50px 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mdl-textfield {
+      width: 250px;
+    }
+
+    .mdl-button {
+      height: 40px;
+    }
+
+    .mdl-list {
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+    }
+
+    .delete-btn {
+      cursor: pointer;
+      color: #3f51b5;
+      transition: color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      color: red;
+    }
+
+    .mdl-list__item {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 2px solid #3f51b5;
+      border-radius: 6px;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .mdl-list__item:hover {
+      background-color: #e8eaf6;
+      box-shadow: 0 2px 6px rgba(63,81,181,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <button class="mdl-button mdl-js-button mdl-button--icon" onclick="window.location.href='index.html'" title="Zurück zur Startseite">
+          <i class="material-icons">arrow_back</i>
+        </button>
+        <span class="mdl-layout-title" style="margin-left: 10px;">Tagebücher</span>
+        <div class="mdl-layout-spacer"></div>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <div class="page-content">
+        <form onsubmit="event.preventDefault(); addDiary();">
+          <div class="input-wrapper">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" type="text" id="diaryname" />
+              <label class="mdl-textfield__label" for="diaryname">Neues Tagebuch anlegen</label>
+            </div>
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Anlegen
+            </button>
+          </div>
+        </form>
+
+        <ul class="mdl-list" id="diarylist"></ul>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const storageKey = "tagebuecher"; // Schlüssel für Liste aller Tagebücher
+
+    document.addEventListener("DOMContentLoaded", loadDiaries);
+
+    function loadDiaries() {
+      let diaries = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const list = document.getElementById("diarylist");
+      list.innerHTML = "";
+
+      diaries.forEach(name => {
+        const li = document.createElement("li");
+        li.className = "mdl-list__item";
+
+        // Icon links als Tagebuchsymbol
+        const icon = document.createElement("i");
+        icon.className = "material-icons";
+        icon.style.color = "#3f51b5";
+        icon.style.marginRight = "10px";
+        icon.textContent = "menu_book";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = name;
+        nameSpan.style.flexGrow = "1";
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "material-icons delete-btn";
+        deleteIcon.title = "Löschen";
+        deleteIcon.textContent = "delete";
+
+        // Klick auf das ganze Listenelement öffnet Tagebucheinträge
+        li.addEventListener("click", () => {
+          window.location.href = `tagebucheintrage.html?name=${encodeURIComponent(name)}`;
+        });
+
+        // Löschen nur auf Klick auf Mülleimer
+        deleteIcon.addEventListener("click", e => {
+          e.stopPropagation();
+          deleteDiary(name);
+        });
+
+        li.appendChild(icon);
+        li.appendChild(nameSpan);
+        li.appendChild(deleteIcon);
+
+        list.appendChild(li);
+      });
+    }
+
+    function addDiary() {
+      const input = document.getElementById("diaryname");
+      const name = input.value.trim();
+      if (!name) return;
+
+      let diaries = JSON.parse(localStorage.getItem(storageKey)) || [];
+
+      if (diaries.includes(name)) {
+        alert("Ein Tagebuch mit diesem Namen existiert bereits.");
+        return;
+      }
+
+      diaries.push(name);
+      localStorage.setItem(storageKey, JSON.stringify(diaries));
+
+      input.value = "";
+      loadDiaries();
+    }
+
+    function deleteDiary(name) {
+      let diaries = JSON.parse(localStorage.getItem(storageKey)) || [];
+      diaries = diaries.filter(d => d !== name);
+      localStorage.setItem(storageKey, JSON.stringify(diaries));
+
+      // Auch alle Einträge des Tagebuchs löschen:
+      localStorage.removeItem(`eintraege_${name}`);
+
+      loadDiaries();
+    }
+  </script>
+</body>
+</html>

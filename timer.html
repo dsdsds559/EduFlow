@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pomodoro Timer - StudyNotes</title>
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+      background-color: #f5f5f5;
+    }
+
+    .mdl-layout__content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 21px;
+      left: 18px;
+      color: white;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .back-button i {
+      margin-right: 4px;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .timer-box {
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .timer-display {
+      font-size: 5rem;
+      color: #3f51b5;
+      font-weight: bold;
+      margin: 24px 0;
+    }
+
+    .mode-label {
+      font-size: 1.7rem;
+      color: #3f51b5;
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+    }
+
+    .buttons-container {
+      margin: 20px 0;
+    }
+
+    .mdl-button {
+      margin: 0 8px;
+    }
+
+    progress {
+      width: 100%;
+      height: 6px;
+      border-radius: 4px;
+    }
+
+    .pomodoro-count {
+      margin-top: 12px;
+      font-size: 1rem;
+      color: #555;
+    }
+
+    .input-fields {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-fields input {
+      padding: 8px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .input-fields label {
+      font-size: 0.9rem;
+      color: #555;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <!-- App Bar -->
+    <header class="mdl-layout__header mdl-color--indigo">
+      <div class="mdl-layout__header-row">
+        <a href="index.html" class="back-button">
+          <i class="material-icons">arrow_back</i>
+        </a>
+        <span class="mdl-layout-title" style="margin-left: 40px;">Pomodoro Timer</span>
+      </div>
+    </header>
+
+    <!-- Hauptinhalt -->
+    <main class="mdl-layout__content">
+      <div class="main-content">
+        <div class="timer-box">
+          <div class="input-fields">
+            <label for="workInput">Arbeitszeit (Minuten)</label>
+            <input type="number" id="workInput" value="25" min="1" max="90" />
+
+            <label for="pauseInput">Pausenzeit (Minuten)</label>
+            <input type="number" id="pauseInput" value="5" min="1" max="30" />
+
+            <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="applyTimesBtn">
+              Übernehmen
+            </button>
+          </div>
+
+          <div class="mode-label" id="modeLabel">Arbeitsphase</div>
+          <div class="timer-display" id="timer">25:00</div>
+
+          <progress class="mdl-progress mdl-js-progress" id="progressBar" value="0" max="100"></progress>
+
+          <div class="buttons-container">
+            <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="startPauseBtn">
+              Start
+            </button>
+            <button class="mdl-button mdl-js-button mdl-button--raised" id="resetBtn">
+              Reset
+            </button>
+          </div>
+
+          <div class="pomodoro-count" id="pomodoroCount">Pomodoros abgeschlossen: 0</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <audio id="alarmSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" type="audio/ogg" />
+    Dein Browser unterstützt keine Audio-Wiedergabe.
+  </audio>
+
+  <!-- MDL JS -->
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+  <script>
+    let WORK_TIME = 25 * 60;
+    let SHORT_BREAK = 5 * 60;
+    const LONG_BREAK = 15 * 60;
+    const POMODOROS_BEFORE_LONG_BREAK = 4;
+
+    let currentPhase = 'work';
+    let pomodoroCount = 0;
+    let timerSeconds = WORK_TIME;
+    let timerInterval = null;
+    let isRunning = false;
+
+    const timerEl = document.getElementById('timer');
+    const modeLabelEl = document.getElementById('modeLabel');
+    const startPauseBtn = document.getElementById('startPauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const progressBar = document.getElementById('progressBar');
+    const pomodoroCountEl = document.getElementById('pomodoroCount');
+    const workInput = document.getElementById('workInput');
+    const pauseInput = document.getElementById('pauseInput');
+    const applyTimesBtn = document.getElementById('applyTimesBtn');
+    const alarmSound = document.getElementById('alarmSound');
+
+    function updateTimerDisplay() {
+      const min = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+      const sec = (timerSeconds % 60).toString().padStart(2, '0');
+      timerEl.textContent = `${min}:${sec}`;
+
+      let totalTime = currentPhase === 'work' ? WORK_TIME : (currentPhase === 'shortBreak' ? SHORT_BREAK : LONG_BREAK);
+      progressBar.value = ((totalTime - timerSeconds) / totalTime) * 100;
+    }
+
+    function updateModeLabel() {
+      if (currentPhase === 'work') {
+        modeLabelEl.textContent = 'Arbeitsphase';
+        modeLabelEl.style.color = '#3f51b5';
+      } else if (currentPhase === 'shortBreak') {
+        modeLabelEl.textContent = 'Kurze Pause';
+        modeLabelEl.style.color = '#4caf50';
+      } else {
+        modeLabelEl.textContent = 'Lange Pause';
+        modeLabelEl.style.color = '#009688';
+      }
+    }
+
+    function updatePomodoroCount() {
+      pomodoroCountEl.textContent = `Pomodoros abgeschlossen: ${pomodoroCount}`;
+    }
+
+    function switchPhase() {
+      if (currentPhase === 'work') {
+        pomodoroCount++;
+        updatePomodoroCount();
+        if (pomodoroCount % POMODOROS_BEFORE_LONG_BREAK === 0) {
+          currentPhase = 'longBreak';
+          timerSeconds = LONG_BREAK;
+        } else {
+          currentPhase = 'shortBreak';
+          timerSeconds = SHORT_BREAK;
+        }
+      } else {
+        currentPhase = 'work';
+        timerSeconds = WORK_TIME;
+      }
+      updateModeLabel();
+      updateTimerDisplay();
+    }
+
+    function timerTick() {
+      if (timerSeconds > 0) {
+        timerSeconds--;
+        updateTimerDisplay();
+      } else {
+        alarmSound.volume = 1.0; // maximale Lautstärke
+        alarmSound.play();
+
+        // Stoppt den Ton nach 5 Sekunden
+        setTimeout(() => {
+          alarmSound.pause();
+          alarmSound.currentTime = 0;
+        }, 5000);
+
+        switchPhase();
+      }
+    }
+
+    startPauseBtn.addEventListener('click', () => {
+      if (isRunning) {
+        clearInterval(timerInterval);
+        isRunning = false;
+        startPauseBtn.textContent = 'Start';
+      } else {
+        timerInterval = setInterval(timerTick, 1000);
+        isRunning = true;
+        startPauseBtn.textContent = 'Pause';
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      clearInterval(timerInterval);
+      isRunning = false;
+      startPauseBtn.textContent = 'Start';
+      pomodoroCount = 0;
+      currentPhase = 'work';
+      timerSeconds = WORK_TIME;
+      updateTimerDisplay();
+      updateModeLabel();
+      updatePomodoroCount();
+
+      // Stoppt Ton beim Reset, falls noch spielend
+      alarmSound.pause();
+      alarmSound.currentTime = 0;
+    });
+
+    applyTimesBtn.addEventListener('click', () => {
+      const workMins = parseInt(workInput.value);
+      const breakMins = parseInt(pauseInput.value);
+
+      if (workMins > 0 && breakMins > 0) {
+        WORK_TIME = workMins * 60;
+        SHORT_BREAK = breakMins * 60;
+        resetBtn.click(); // Setzt alles zurück mit den neuen Werten
+      }
+    });
+
+    updateTimerDisplay();
+    updateModeLabel();
+    updatePomodoroCount();
+  </script>
+</body>
+</html>

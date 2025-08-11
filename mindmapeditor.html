@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mindmap Editor</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+    }
+
+    header {
+      background-color: #3f51b5;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 10px;
+    }
+
+    header button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .toolbar {
+      background-color: #e8eaf6;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .toolbar button {
+      background-color: #3f51b5;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .toolbar button:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 100;
+    }
+
+    .toolbar button.connecting {
+      background-color: #ff5722;
+    }
+
+    #canvas {
+      position: relative;
+      width: 100vw;
+      height: calc(100vh - 112px);
+      background-color: #f0f0f0;
+      overflow: hidden;
+    }
+
+    .node {
+      position: absolute;
+      min-width: 100px;
+      min-height: 50px;
+      background-color: white;
+      border: 2px solid #3f51b5;
+      border-radius: 10px;
+      padding: 10px;
+      cursor: move;
+      resize: both;
+      overflow: auto;
+    }
+
+    .node-text {
+      outline: none;
+      min-height: 20px;
+      word-wrap: break-word;
+    }
+
+    .node.connecting-mode {
+      cursor: pointer;
+      border-color: #ff5722;
+    }
+
+    .node.selected-for-connection {
+      background-color: #ffeb3b;
+      border-color: #ff5722;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button onclick="window.location.href='mindmaps.html'">⬅️</button>
+    <h3>Mindmap Editor</h3>
+  </header>
+
+  <div class="toolbar">
+    <button onclick="addNode()" data-tooltip="Neue Sprechblase erstellen">+ Sprechblase</button>
+    <button id="connectBtn" onclick="toggleConnection()" data-tooltip="Verbindungsmodus aktivieren/deaktivieren">↔️ Pfeil verbinden</button>
+    <button onclick="saveMindmap()" data-tooltip="Speichert deine aktuelle Mindmap">💾 Speichern</button>
+  </div>
+
+  <div id="canvas">
+    <svg id="lines"></svg>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const mapName = urlParams.get("name") || "default";
+
+    let nodeIdCounter = 0;
+    let selectedNode = null;
+    let connectStart = null;
+    let connections = [];
+    let isConnecting = false;
+
+    function addNode(x = 100, y = 100, text = "Klicken zum Bearbeiten") {
+      const node = document.createElement("div");
+      node.className = "node";
+      node.style.left = `${x}px`;
+      node.style.top = `${y}px`;
+      node.dataset.id = `node-${nodeIdCounter++}`;
+      
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.innerHTML = "×";
+      deleteBtn.onclick = (e) => deleteNode(e, deleteBtn);
+      
+      const textDiv = document.createElement("div");
+      textDiv.className = "node-text";
+      textDiv.contentEditable = true;
+      textDiv.innerText = text;
+      
+      node.appendChild(textDiv);
+      node.appendChild(deleteBtn);
+
+      // Event-Listener für Drag & Drop
+      node.addEventListener("mousedown", dragMouseDown);
+      
+      // Event-Listener für Verbindungen (nur wenn im Verbindungsmodus)
+      node.addEventListener("click", handleNodeClick);
+
+      document.getElementById("canvas").appendChild(node);
+      
+      // Fokus auf den Text setzen für sofortiges Bearbeiten
+      if (text === "Klicken zum Bearbeiten") {
+        setTimeout(() => {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(textDiv);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }, 10);
+      }
+    }
+
+    function handleNodeClick(e) {
+      if (!isConnecting) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const node = e.currentTarget;
+      
+      if (!connectStart) {
+        connectStart = node;
+        node.classList.add("selected-for-connection");
+      } else if (connectStart !== node) {
+        connections.push([connectStart.dataset.id, node.dataset.id]);
+        drawConnections();
+        
+        // Reset connection state
+        connectStart.classList.remove("selected-for-connection");
+        connectStart = null;
+        toggleConnection(); // Verbindungsmodus beenden
+      }
+    }
+
+    function toggleConnection() {
+      isConnecting = !isConnecting;
+      const connectBtn = document.getElementById("connectBtn");
+      const textDivs = document.querySelectorAll(".node-text");
+      
+      if (isConnecting) {
+        connectBtn.classList.add("connecting");
+        connectBtn.innerHTML = "❌ Abbrechen";
+        connectBtn.setAttribute("data-tooltip", "Verbindungsmodus beenden");
+        document.querySelectorAll(".node").forEach(node => {
+          node.classList.add("connecting-mode");
+        });
+        textDivs.forEach(textDiv => {
+          textDiv.contentEditable = false; // Text-Bearbeitung deaktivieren
+        });
+      } else {
+        connectBtn.classList.remove("connecting");
+        connectBtn.innerHTML = "↔️ Pfeil verbinden";
+        connectBtn.setAttribute("data-tooltip", "Verbindungsmodus aktivieren/deaktivieren");
+        document.querySelectorAll(".node").forEach(node => {
+          node.classList.remove("connecting-mode", "selected-for-connection");
+        });
+        textDivs.forEach(textDiv => {
+          textDiv.contentEditable = true; // Text-Bearbeitung wieder aktivieren
+        });
+        
+        // Reset connection state
+        if (connectStart) {
+          connectStart.classList.remove("selected-for-connection");
+          connectStart = null;
+        }
+      }
+    }
+
+    function deleteNode(event, btn) {
+      event.stopPropagation();
+      const node = btn.parentElement;
+      const id = node.dataset.id;
+      node.remove();
+      connections = connections.filter(([from, to]) => from !== id && to !== id);
+      drawConnections();
+    }
+
+    let offsetX, offsetY, isDragging = false;
+    
+    function dragMouseDown(e) {
+      // Nicht draggen wenn:
+      // - Delete-Button geklickt wird
+      // - Im Verbindungsmodus
+      // - Text-Bereich geklickt wird
+      if (e.target.classList.contains("delete-btn") || 
+          e.target.classList.contains("node-text") ||
+          isConnecting) {
+        return;
+      }
+      
+      e.preventDefault();
+      isDragging = true;
+      selectedNode = e.currentTarget;
+      offsetX = e.clientX - selectedNode.offsetLeft;
+      offsetY = e.clientY - selectedNode.offsetTop;
+      document.addEventListener("mousemove", dragMouseMove);
+      document.addEventListener("mouseup", dragMouseUp);
+    }
+
+    function dragMouseMove(e) {
+      if (!selectedNode || !isDragging) return;
+      selectedNode.style.left = `${e.clientX - offsetX}px`;
+      selectedNode.style.top = `${e.clientY - offsetY}px`;
+      drawConnections();
+    }
+
+    function dragMouseUp() {
+      isDragging = false;
+      selectedNode = null;
+      document.removeEventListener("mousemove", dragMouseMove);
+      document.removeEventListener("mouseup", dragMouseUp);
+    }
+
+    function saveMindmap() {
+      const nodes = [...document.querySelectorAll(".node")].map(n => ({
+        id: n.dataset.id,
+        x: n.offsetLeft,
+        y: n.offsetTop,
+        text: n.querySelector(".node-text") ? n.querySelector(".node-text").innerText.trim() : "",
+      }));
+      const data = { nodes, connections };
+      localStorage.setItem(`mindmap_${mapName}`, JSON.stringify(data));
+      alert("Mindmap gespeichert.");
+    }
+
+    function loadMindmap() {
+      const raw = localStorage.getItem(`mindmap_${mapName}`);
+      if (!raw) return;
+      const { nodes, connections: conns } = JSON.parse(raw);
+      nodes.forEach(n => {
+        addNode(n.x, n.y, n.text);
+        const lastNode = document.querySelector(".node:last-child");
+        lastNode.dataset.id = n.id;
+      });
+      connections = conns;
+      drawConnections();
+    }
+
+    function drawConnections() {
+      const svg = document.getElementById("lines");
+      svg.innerHTML = "";
+      const canvas = document.getElementById("canvas");
+      svg.setAttribute("width", canvas.offsetWidth);
+      svg.setAttribute("height", canvas.offsetHeight);
+
+      connections.forEach(([fromId, toId]) => {
+        const from = document.querySelector(`[data-id='${fromId}']`);
+        const to = document.querySelector(`[data-id='${toId}']`);
+        if (!from || !to) return;
+
+        const x1 = from.offsetLeft + from.offsetWidth / 2;
+        const y1 = from.offsetTop + from.offsetHeight / 2;
+        const x2 = to.offsetLeft + to.offsetWidth / 2;
+        const y2 = to.offsetTop + to.offsetHeight / 2;
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x1);
+        line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2);
+        line.setAttribute("y2", y2);
+        line.setAttribute("stroke", "#3f51b5");
+        line.setAttribute("stroke-width", "2");
+        line.setAttribute("marker-end", "url(#arrow)");
+        svg.appendChild(line);
+      });
+
+      // Arrow marker definieren
+      if (connections.length > 0) {
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        defs.innerHTML = `
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="#3f51b5" />
+          </marker>
+        `;
+        svg.appendChild(defs);
+      }
+    }
+
+    // Canvas-Click um Verbindungsmodus zu beenden
+    document.getElementById("canvas").addEventListener("click", (e) => {
+      if (e.target.id === "canvas" && isConnecting) {
+        toggleConnection();
+      }
+    });
+
+    window.onload = loadMindmap;
+  </script>
+</body>
+</html>

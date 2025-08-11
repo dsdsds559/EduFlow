@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo-Listen</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+    <style>
+        .container {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .mdl-list {
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+        }
+
+        .mdl-list__item {
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mdl-list__item:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .mdl-list__item-icon {
+            margin-right: 10px;
+        }
+
+        .mdl-list__item-primary-content {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .mdl-list__item-primary-content span {
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+
+        .add-button-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .mdl-textfield {
+            flex: 1;
+            margin: 0;
+        }
+
+        .save-button {
+            height: 40px;
+            padding: 0 16px;
+            line-height: 40px;
+            white-space: nowrap;
+        }
+
+        .delete-btn {
+            cursor: pointer;
+            color: #3f51b5;
+            font-size: 20px;
+            transition: color 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            color: red;
+        }
+
+        .back-icon {
+            color: white;
+            cursor: pointer;
+            margin-right: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+            <!-- Zurück-Pfeil -->
+            <i class="material-icons back-icon" onclick="window.location.href='index.html'">arrow_back</i>
+            <span class="mdl-layout-title">ToDo-Listen</span>
+            <div class="mdl-layout-spacer"></div>
+        </div>
+    </header>
+
+    <main class="mdl-layout__content">
+        <div class="page-content container">
+            <h4>Neue ToDo-Liste</h4>
+            <div class="add-button-container">
+                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class="mdl-textfield__input" type="text" id="todoName" onkeydown="handleKeyPress(event)">
+                    <label class="mdl-textfield__label" for="todoName">Name der ToDo-Liste...</label>
+                </div>
+                <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored save-button" onclick="addTodoList()">
+                    Speichern
+                </button>
+            </div>
+
+            <ul class="mdl-list" id="todoListContainer"></ul>
+        </div>
+    </main>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", loadTodoLists);
+
+    function handleKeyPress(event) {
+        if (event.key === "Enter") {
+            addTodoList();
+        }
+    }
+
+    function addTodoList() {
+        var input = document.getElementById("todoName");
+        var list = document.getElementById("todoListContainer");
+
+        if (input.value.trim() !== "") {
+            var li = document.createElement("li");
+            li.classList.add("mdl-list__item", "mdl-list__item--two-line");
+            li.innerHTML = `
+                <span class="mdl-list__item-primary-content" onclick="openTodo('${input.value}')">
+                    <i class="material-icons mdl-list__item-icon">list_alt</i>
+                    <span>${input.value}</span>
+                </span>
+                <span class="delete-btn" onclick="deleteTodoList(event)">
+                    <i class="material-icons">delete</i>
+                </span>
+            `;
+            list.appendChild(li);
+
+            saveTodoList(input.value);
+            input.value = "";
+            input.blur();
+
+            const label = document.querySelector("label[for='todoName']");
+            label.classList.remove('is-focused');
+        }
+    }
+
+    function saveTodoList(name) {
+        let lists = JSON.parse(localStorage.getItem("todoLists")) || [];
+        if (!lists.includes(name)) {
+            lists.push(name);
+            localStorage.setItem("todoLists", JSON.stringify(lists));
+        }
+    }
+
+    function loadTodoLists() {
+        let lists = JSON.parse(localStorage.getItem("todoLists")) || [];
+        let listContainer = document.getElementById("todoListContainer");
+        listContainer.innerHTML = '';
+
+        lists.forEach(name => {
+            var li = document.createElement("li");
+            li.classList.add("mdl-list__item", "mdl-list__item--two-line");
+            li.innerHTML = `
+                <span class="mdl-list__item-primary-content" onclick="openTodo('${name}')">
+                    <i class="material-icons mdl-list__item-icon">list_alt</i>
+                    <span>${name}</span>
+                </span>
+                <span class="delete-btn" onclick="deleteTodoList(event)">
+                    <i class="material-icons">delete</i>
+                </span>
+            `;
+            listContainer.appendChild(li);
+        });
+    }
+
+    function deleteTodoList(event) {
+        event.stopPropagation();
+        var listItem = event.target.closest("li");
+        var listName = listItem.querySelector(".mdl-list__item-primary-content span").textContent;
+
+        let lists = JSON.parse(localStorage.getItem("todoLists")) || [];
+        lists = lists.filter(item => item !== listName);
+        localStorage.setItem("todoLists", JSON.stringify(lists));
+
+        listItem.remove();
+    }
+
+    function openTodo(name) {
+        window.location.href = "todo.html?name=" + encodeURIComponent(name);
+    }
+</script>
+
+</body>
+</html>

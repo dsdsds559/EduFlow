@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Karteikarten Editor - Kann ich / Muss ich noch lernen</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+      background: #fff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-content {
+      padding: 50px 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .legend {
+      font-size: 0.9rem;
+      color: #444;
+      margin-bottom: 10px;
+      user-select: none;
+      display: flex;
+      gap: 15px;
+    }
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+    }
+    .legend .icon {
+      font-size: 1.3rem;
+    }
+    .icon.green {
+      color: #4caf50;
+    }
+    .icon.red {
+      color: #f44336;
+    }
+
+    .card-index {
+      font-weight: 600;
+      color: #3f51b5;
+      font-size: 1rem;
+      user-select: none;
+    }
+
+    .set-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #3f51b5;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .card-container {
+      position: relative;
+      width: 320px;
+      height: 200px;
+      perspective: 1000px;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      background: #f5f5f5;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-content {
+      position: absolute;
+      backface-visibility: hidden;
+      font-size: 1.3rem;
+      text-align: center;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 15px;
+      box-sizing: border-box;
+    }
+
+    .card-front {
+      background: #e3f2fd;
+      border-radius: 10px;
+      color: #0d47a1;
+      font-weight: 600;
+    }
+
+    .card-back {
+      background: #0d47a1;
+      border-radius: 10px;
+      color: white;
+      transform: rotateY(180deg);
+      font-weight: 600;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      cursor: pointer;
+      color: #3f51b5;
+      transition: color 0.3s ease;
+      font-size: 24px;
+      user-select: none;
+      z-index: 11;
+    }
+
+    .delete-btn:hover {
+      color: red;
+    }
+
+    .action-buttons {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      box-sizing: border-box;
+      pointer-events: none; /* deaktivieren wenn Karte nicht flipped ist */
+      user-select: none;
+    }
+
+    .action-buttons button {
+      background: none;
+      border: none;
+      font-size: 2.2rem;
+      cursor: pointer;
+      pointer-events: auto;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+      color: #666;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transform: scaleX(-1); /* Spiegelung rückgängig machen */
+    }
+    .action-buttons button.green {
+      color: #4caf50;
+      transform: scaleX(1); /* Grüner Haken normal anzeigen */
+    }
+    .action-buttons button.green:hover {
+      background-color: #c8e6c9;
+    }
+    .action-buttons button.red {
+      color: #f44336;
+      transform: scaleX(-1); /* Rotes X gespiegelt lassen */
+    }
+    .action-buttons button.red:hover {
+      background-color: #ffcdd2;
+    }
+
+    .congratulations {
+      text-align: center;
+      padding: 30px;
+      background: linear-gradient(135deg, #4caf50, #81c784);
+      color: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(76, 175, 80, 0.3);
+      margin: 20px 0;
+      animation: celebrationPulse 2s ease-in-out infinite alternate;
+    }
+
+    .congratulations h2 {
+      margin: 0 0 15px 0;
+      font-size: 2rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .congratulations p {
+      margin: 0 0 20px 0;
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .congratulations button {
+      background: white;
+      color: #4caf50;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .congratulations button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+
+    @keyframes celebrationPulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.02); }
+    }
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <button class="mdl-button mdl-js-button mdl-button--icon" onclick="window.location.href='karteien.html'" title="Zurück">
+          <i class="material-icons">arrow_back</i>
+        </button>
+        <span class="mdl-layout-title" style="margin-left: 10px;">Karteikarten Editor</span>
+        <div class="mdl-layout-spacer"></div>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <div class="page-content">
+
+        <div class="set-name" id="set-name">Karteikarten Set</div>
+
+        <div class="legend">
+          <span><i class="material-icons icon green">check_circle</i> = Kann ich</span>
+          <span><i class="material-icons icon red">close</i> = Muss ich noch lernen</span>
+        </div>
+
+        <div class="card-index" id="card-index">Karte 0 von 0</div>
+
+        <div id="congratulations" class="congratulations" style="display: none;">
+          <h2>🎉 Herzlichen Glückwunsch! 🎉</h2>
+          <p>Sie haben alle Karteikarten erfolgreich durchgearbeitet!</p>
+          <button onclick="restartLearning()">Nochmal von vorne beginnen</button>
+        </div>
+
+        <div class="card-container" id="card-container">
+          <div class="card" id="card" onclick="flipCard()">
+            <div class="card-content card-front" id="card-front"></div>
+            <div class="card-content card-back" id="card-back"></div>
+            <i class="material-icons delete-btn" id="delete-btn" title="Karte löschen">delete</i>
+
+            <div class="action-buttons" id="action-buttons" style="display:none;">
+              <button class="green" title="Kann ich" onclick="markKnown(event)"><i class="material-icons">check_circle</i></button>
+              <button class="red" title="Muss ich noch lernen" onclick="markUnknown(event)"><i class="material-icons">close</i></button>
+            </div>
+          </div>
+        </div>
+
+        <form onsubmit="event.preventDefault(); addCard();" style="margin-top: 30px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+          <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 250px;">
+            <input class="mdl-textfield__input" type="text" id="front-input" />
+            <label class="mdl-textfield__label" for="front-input">Vorderseite</label>
+          </div>
+          <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width: 250px;">
+            <input class="mdl-textfield__input" type="text" id="back-input" />
+            <label class="mdl-textfield__label" for="back-input">Rückseite</label>
+          </div>
+          <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored" style="height: 40px;">
+            Karte hinzufügen
+          </button>
+        </form>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Set-Name aus URL-Parameter holen
+    const urlParams = new URLSearchParams(window.location.search);
+    const setName = urlParams.get('name') || 'default';
+    const storageKey = `flashcards_${setName}`;
+
+    // Alle Karten, mit Flag known (true = kann ich, false = muss ich noch lernen)
+    let cards = JSON.parse(localStorage.getItem(storageKey)) || [];
+    let currentIndex = 0;
+    let flipped = false;
+
+    // Wir zeigen zuerst nur die Karten, die noch nicht "known" sind:
+    function getLearningCards() {
+      return cards.filter(card => !card.known);
+    }
+    // Wir zeigen alle known cards ganz am Ende
+    function getKnownCards() {
+      return cards.filter(card => card.known);
+    }
+
+    // Index im Lernstapel, nicht global index in cards!
+    // Wir merken uns diesen separaten Index:
+    let learningIndex = 0;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Set-Name anzeigen
+      document.getElementById("set-name").textContent = `Karteikarten Set: ${setName}`;
+      
+      updateUI();
+
+      document.getElementById("delete-btn").addEventListener("click", e => {
+        e.stopPropagation();
+        deleteCard();
+      });
+    });
+
+    function updateUI() {
+      const cardFront = document.getElementById("card-front");
+      const cardBack = document.getElementById("card-back");
+      const card = document.getElementById("card");
+      const cardIndex = document.getElementById("card-index");
+      const actionButtons = document.getElementById("action-buttons");
+      const cardContainer = document.getElementById("card-container");
+      const congratulations = document.getElementById("congratulations");
+
+      const learningCards = getLearningCards();
+      const knownCards = getKnownCards();
+
+      // Wenn keine Karten
+      if(cards.length === 0) {
+        cardFront.textContent = "Keine Karten vorhanden";
+        cardBack.textContent = "";
+        card.classList.remove("flipped");
+        cardIndex.textContent = "Karte 0 von 0";
+        flipped = false;
+        actionButtons.style.display = "none";
+        congratulations.style.display = "none";
+        cardContainer.style.display = "block";
+        return;
+      }
+
+      // Wenn alle Karten als "known" markiert sind - Gratulation anzeigen
+      if(learningCards.length === 0 && knownCards.length > 0) {
+        congratulations.style.display = "block";
+        cardContainer.style.display = "none";
+        cardIndex.textContent = `Alle ${cards.length} Karten erfolgreich gelernt!`;
+        return;
+      }
+
+      // Normale Lernkarten anzeigen
+      congratulations.style.display = "none";
+      cardContainer.style.display = "block";
+      
+      // Falls learningIndex out of bounds, reset
+      if(learningIndex >= learningCards.length) learningIndex = 0;
+      if(learningIndex < 0) learningIndex = 0;
+
+      const currentCard = learningCards[learningIndex];
+      // global index finden
+      currentIndex = cards.findIndex(c => c === currentCard);
+
+      cardFront.textContent = currentCard.front;
+      cardBack.textContent = currentCard.back;
+      cardIndex.textContent = `Lernkarten: ${learningIndex + 1} von ${learningCards.length}`;
+
+      // Karte zurücksetzen
+      if(flipped) {
+        card.classList.add("flipped");
+        actionButtons.style.display = "flex";
+      } else {
+        card.classList.remove("flipped");
+        actionButtons.style.display = "none";
+      }
+    }
+
+    function flipCard() {
+      if(cards.length === 0) return;
+
+      flipped = !flipped;
+      updateUI();
+    }
+
+    // Karte löschen (die aktuelle globale Karte)
+    function deleteCard() {
+      if(cards.length === 0) return;
+      cards.splice(currentIndex, 1);
+      saveCards();
+      // Lernindex anpassen falls out of bounds
+      if(learningIndex >= getLearningCards().length) learningIndex = 0;
+      flipped = false;
+      updateUI();
+    }
+
+    function addCard() {
+      const frontInput = document.getElementById("front-input");
+      const backInput = document.getElementById("back-input");
+      const front = frontInput.value.trim();
+      const back = backInput.value.trim();
+
+      if(front === "" || back === "") {
+        alert("Bitte Vorder- und Rückseite ausfüllen.");
+        return;
+      }
+
+      cards.push({ front, back, known: false });
+      saveCards();
+      frontInput.value = "";
+      backInput.value = "";
+
+      learningIndex = getLearningCards().length - 1; // auf neue Karte springen
+      flipped = false;
+      updateUI();
+    }
+
+    function saveCards() {
+      localStorage.setItem(storageKey, JSON.stringify(cards));
+    }
+
+    // "Kann ich" drücken = Karte als known markieren und nächste zeigen
+    function markKnown(event) {
+      event.stopPropagation();
+      cards[currentIndex].known = true;
+      saveCards();
+
+      // Lernkarten neu laden
+      // Da Karte jetzt known ist, aus Lernkarten raus
+      const learningCards = getLearningCards();
+      if(learningIndex >= learningCards.length) {
+        learningIndex = 0;
+      }
+      flipped = false;
+
+      updateUI();
+    }
+
+    // "Muss ich noch lernen" drücken = Karte bleibt unbekannt, nächstes zeigen
+    function markUnknown(event) {
+      event.stopPropagation();
+      // Lernindex +1
+      learningIndex++;
+      const learningCards = getLearningCards();
+      if(learningIndex >= learningCards.length) {
+        learningIndex = 0; // Schleife zu Anfang
+      }
+      flipped = false;
+      updateUI();
+    }
+
+    // Funktion um das Lernen neu zu starten (alle Karten wieder auf "unknown" setzen)
+    function restartLearning() {
+      // Alle Karten wieder als "unbekannt" markieren
+      cards.forEach(card => {
+        card.known = false;
+      });
+      
+      // Index zurücksetzen
+      learningIndex = 0;
+      flipped = false;
+      
+      // Speichern und UI aktualisieren
+      saveCards();
+      updateUI();
+    }
+  </script>
+</body>
+</html>

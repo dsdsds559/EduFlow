@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Karteikarten</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+  <style>
+    .page-content {
+      padding: 50px 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mdl-textfield {
+      width: 250px;
+    }
+
+    .mdl-button {
+      height: 40px;
+    }
+
+    .mdl-list {
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+    }
+
+    .delete-btn {
+      cursor: pointer;
+      color: #3f51b5;
+      transition: color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      color: red;
+    }
+
+    .mdl-list__item {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 2px solid #3f51b5;
+      border-radius: 6px;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      margin-bottom: 10px;
+    }
+
+    .mdl-list__item:hover {
+      background-color: #e8eaf6;
+      box-shadow: 0 2px 6px rgba(63,81,181,0.3);
+    }
+
+    .card-count {
+      font-size: 0.9rem;
+      color: #666;
+      background-color: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: auto;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <button class="mdl-button mdl-js-button mdl-button--icon" onclick="window.location.href='index.html'" title="Zurück zur Startseite">
+          <i class="material-icons">arrow_back</i>
+        </button>
+        <span class="mdl-layout-title" style="margin-left: 10px;">Karteikarten</span>
+        <div class="mdl-layout-spacer"></div>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <div class="page-content">
+        <form onsubmit="event.preventDefault(); addCardSet();">
+          <div class="input-wrapper">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" type="text" id="setname" />
+              <label class="mdl-textfield__label" for="setname">Neues Set erstellen</label>
+            </div>
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Anlegen
+            </button>
+          </div>
+        </form>
+
+        <ul class="mdl-list" id="setlist"></ul>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const storageKey = "flashcard_sets";
+
+    document.addEventListener("DOMContentLoaded", loadSets);
+
+    function getCardCount(setName) {
+      const cards = JSON.parse(localStorage.getItem(`flashcards_${setName}`)) || [];
+      return cards.length;
+    }
+
+    function loadSets() {
+      let sets = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const list = document.getElementById("setlist");
+      list.innerHTML = "";
+
+      sets.forEach(name => {
+        const li = document.createElement("li");
+        li.className = "mdl-list__item";
+
+        const icon = document.createElement("i");
+        icon.className = "material-icons";
+        icon.style.color = "#3f51b5";
+        icon.style.marginRight = "10px";
+        icon.textContent = "style"; // Icon für Karteikarten
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = name;
+        nameSpan.style.flexGrow = "1";
+
+        const cardCountSpan = document.createElement("span");
+        cardCountSpan.className = "card-count";
+        const count = getCardCount(name);
+        cardCountSpan.textContent = `${count} Karte${count !== 1 ? 'n' : ''}`;
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "material-icons delete-btn";
+        deleteIcon.title = "Löschen";
+        deleteIcon.textContent = "delete";
+
+        li.addEventListener("click", () => {
+          window.location.href = `karteikarteneditor.html?name=${encodeURIComponent(name)}`;
+        });
+
+        deleteIcon.addEventListener("click", e => {
+          e.stopPropagation();
+          deleteSet(name);
+        });
+
+        li.appendChild(icon);
+        li.appendChild(nameSpan);
+        li.appendChild(cardCountSpan);
+        li.appendChild(deleteIcon);
+
+        list.appendChild(li);
+      });
+    }
+
+    function addCardSet() {
+      const input = document.getElementById("setname");
+      const name = input.value.trim();
+      if (!name) return;
+
+      let sets = JSON.parse(localStorage.getItem(storageKey)) || [];
+
+      if (sets.includes(name)) {
+        alert("Ein Set mit diesem Namen existiert bereits.");
+        return;
+      }
+
+      sets.push(name);
+      localStorage.setItem(storageKey, JSON.stringify(sets));
+
+      input.value = "";
+      loadSets();
+    }
+
+    function deleteSet(name) {
+      if (!confirm(`Möchten Sie das Set "${name}" wirklich löschen? Alle Karteikarten gehen verloren.`)) {
+        return;
+      }
+
+      let sets = JSON.parse(localStorage.getItem(storageKey)) || [];
+      sets = sets.filter(s => s !== name);
+      localStorage.setItem(storageKey, JSON.stringify(sets));
+
+      // Karten im Set löschen - WICHTIG: Mit dem korrekten Storage-Key!
+      localStorage.removeItem(`flashcards_${name}`);
+
+      loadSets();
+    }
+  </script>
+</body>
+</html>

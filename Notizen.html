@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notizen</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            background-color: #ffffff;
+            touch-action: none;
+        }
+ 
+        #canvas {
+            display: block;
+            cursor: crosshair;
+            position: absolute;
+            z-index: 1;
+        }
+ 
+        #gridCanvas {
+            display: block;
+            position: absolute;
+            z-index: 0;
+            pointer-events: none;
+        }
+ 
+        .nav {
+            width: auto;
+            height: 70px;
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 18px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+            z-index: 1000;
+        }
+ 
+        .nav:hover {
+            opacity: 1;
+        }
+ 
+        .tool-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            padding: 0 8px;
+            border-right: 1px solid rgba(255,255,255,0.3);
+        }
+ 
+        .tool-group:last-child {
+            border-right: none;
+        }
+ 
+        .grid-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            align-items: center;
+        }
+ 
+        .grid-type-selector {
+            display: flex;
+            gap: 3px;
+        }
+ 
+        .grid-btn {
+            width: 24px;
+            height: 24px;
+            border: 2px solid white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+        }
+ 
+        .grid-btn:hover {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.1);
+        }
+ 
+        .grid-btn.active {
+            background: #ffd700;
+            color: #333;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(255,215,0,0.6);
+        }
+ 
+        .grid-size-control {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+ 
+        .grid-size-slider {
+            width: 50px;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            accent-color: #ffd700;
+        }
+ 
+        .grid-size-display {
+            color: white;
+            font-size: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+ 
+        .clr {
+            height: 32px;
+            width: 32px;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+ 
+        .clr:hover {
+            transform: scale(1.15);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+ 
+        .clr.active {
+            transform: scale(1.2);
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 15px rgba(255,215,0,0.6);
+        }
+ 
+        .clr[data-clr="#000"] { background-color: #000; }
+        .clr[data-clr="red"] { background-color: red; }
+        .clr[data-clr="orange"] { background-color: orange; }
+        .clr[data-clr="blue"] { background-color: blue; }
+        .clr[data-clr="purple"] { background-color: purple; }
+        .clr[data-clr="yellowgreen"] { background-color: yellowgreen; }
+        .clr[data-clr="yellow"] { background-color: yellow; }
+        .clr[data-clr="#fff"] { background-color: #fff; }
+ 
+        button {
+            border: none;
+            outline: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+ 
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+ 
+        button.active {
+            background-color: #45a049;
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 10px rgba(255,215,0,0.5);
+        }
+ 
+        .radierer {
+            background-color: #ff6b6b;
+        }
+ 
+        .radierer:hover, .radierer.active {
+            background-color: #ff5252;
+        }
+ 
+        .stift {
+            background-color: #4ecdc4;
+        }
+ 
+        .stift:hover, .stift.active {
+            background-color: #26a69a;
+        }
+ 
+        .loeschen {
+            background-color: #ff9800;
+        }
+ 
+        .loeschen:hover {
+            background-color: #f57c00;
+        }
+ 
+        .speichern {
+            background-color: #2196f3;
+        }
+ 
+        .speichern:hover {
+            background-color: #1976d2;
+        }
+ 
+        .rueckgaengig, .wiederholen {
+            background-color: #9c27b0;
+            font-size: 14px;
+            padding: 6px 10px;
+        }
+ 
+        .rueckgaengig:hover, .wiederholen:hover {
+            background-color: #7b1fa2;
+        }
+ 
+        .rueckgaengig:disabled, .wiederholen:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+ 
+        input[type="color"] {
+            width: 40px;
+            height: 32px;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 0;
+            background: none;
+        }
+ 
+        input[type="range"] {
+            width: 80px;
+            height: 6px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            outline: none;
+            border-radius: 3px;
+            cursor: pointer;
+            accent-color: white;
+        }
+ 
+        .groesse-anzeige {
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 20px;
+            text-align: center;
+        }
+ 
+        .emoji {
+            font-size: 24px;
+            user-select: none;
+        }
+ 
+        /* Mobile Responsivität */
+        @media (max-width: 768px) {
+            .nav {
+                width: 95%;
+                height: auto;
+                flex-wrap: wrap;
+                padding: 8px;
+                gap: 4px;
+            }
+           
+            .tool-group {
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.3);
+                padding: 4px;
+            }
+           
+            .clr {
+                height: 28px;
+                width: 28px;
+            }
+           
+            button {
+                padding: 6px 8px;
+                font-size: 10px;
+            }
+           
+            input[type="range"] {
+                width: 60px;
+            }
+ 
+            .grid-controls {
+                flex-direction: row;
+            }
+        }
+ 
+        /* Cursor-Stile für verschiedene Werkzeuge */
+        .canvas-stift { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="black"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>') 10 10, crosshair; }
+       
+        .canvas-radierer { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="red"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0"/></svg>') 10 10, crosshair; }
+    </style>
+</head>
+<body>
+    <canvas id="gridCanvas"></canvas>
+    <canvas id="canvas"></canvas>
+    <div class="nav">
+        <div class="tool-group">
+            <button class="stift active">✏️ Stift</button>
+            <button class="radierer">🧽 Radierer</button>
+        </div>
+       
+        <div class="tool-group grid-controls">
+            <div class="grid-type-selector">
+                <div class="grid-btn" data-grid="none" title="Keine Hilfslinien">○</div>
+                <div class="grid-btn" data-grid="lines" title="Liniertes Papier">≡</div>
+                <div class="grid-btn" data-grid="squares" title="Kariertes Papier">⊞</div>
+                <div class="grid-btn" data-grid="dots" title="Punktraster">⋅⋅</div>
+            </div>
+            <div class="grid-size-control">
+                <input type="range" class="grid-size-slider" id="gridSize" value="20" min="10" max="50" title="Rasterabstand">
+                <div class="grid-size-display" id="gridSizeDisplay">20</div>
+            </div>
+        </div>
+       
+        <div class="tool-group">
+            <div class="clr active" data-clr="#000"></div>
+            <div class="clr" data-clr="red"></div>
+            <div class="clr" data-clr="orange"></div>
+            <div class="clr" data-clr="blue"></div>
+            <div class="clr" data-clr="purple"></div>
+            <div class="clr" data-clr="yellowgreen"></div>
+            <div class="clr" data-clr="yellow"></div>
+            <div class="clr" data-clr="#fff"></div>
+            <input type="color" id="eigeneFarbe" value="#000000" title="Benutzerdefinierte Farbe">
+        </div>
+       
+        <div class="tool-group">
+            <input type="range" id="pinselGroesse" value="5" min="1" max="20" title="Pinselgröße">
+            <div class="groesse-anzeige" id="groesseAnzeige">5</div>
+        </div>
+       
+        <div class="tool-group">
+            <input type="color" value="#FFFFFF" id="hintergrundFarbe" title="Hintergrundfarbe">
+            <div class="emoji">🎨</div>
+        </div>
+       
+        <div class="tool-group">
+            <button class="rueckgaengig" id="rueckgaengigBtn" title="Rückgängig (Strg+Z)">↶</button>
+            <button class="wiederholen" id="wiederholenBtn" title="Wiederholen (Strg+Y)">↷</button>
+        </div>
+       
+        <div class="tool-group">
+            <button class="loeschen">🗑️ Löschen</button>
+            <button class="speichern">💾 Speichern</button>
+        </div>
+    </div>
+ 
+    <script>
+        class NotizenApp {
+            constructor() {
+                this.canvas = document.getElementById("canvas");
+                this.ctx = this.canvas.getContext("2d");
+                this.gridCanvas = document.getElementById("gridCanvas");
+                this.gridCtx = this.gridCanvas.getContext("2d");
+                this.body = document.querySelector("body");
+               
+                // Zeichenstatus
+                this.zeichnet = false;
+                this.radiert = false;
+                this.aktuellesWerkzeug = 'stift';
+                this.aktuelleFarbe = '#000';
+                this.aktuelleGroesse = 5;
+                this.letzteX = 0;
+                this.letzteY = 0;
+               
+                // Raster-Einstellungen
+                this.rasterTyp = 'none';
+                this.rasterGroesse = 20;
+                this.rasterFarbe = 'rgba(200, 200, 200, 0.5)';
+               
+                // Verlauf für Rückgängig/Wiederholen
+                this.verlauf = [];
+                this.verlaufSchritt = 0;
+                this.maxVerlaufSchritte = 20;
+               
+                this.initialisieren();
+            }
+           
+            initialisieren() {
+                this.canvasEinrichten();
+                this.eventListenerEinrichten();
+                this.canvasEinstellungenSetzen();
+                this.rasterZeichnen();
+                this.statusSpeichern(); // Ersten leeren Status speichern
+                this.uiAktualisieren();
+            }
+           
+            canvasEinrichten() {
+                this.canvasGroesseAnpassen();
+                window.addEventListener('resize', () => this.canvasGroesseAnpassen());
+            }
+           
+            canvasGroesseAnpassen() {
+                // Aktuelles Bild zwischenspeichern
+                const bildDaten = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+               
+                // Canvas-Größe anpassen
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.gridCanvas.width = window.innerWidth;
+                this.gridCanvas.height = window.innerHeight;
+               
+                // Bild wiederherstellen
+                this.ctx.putImageData(bildDaten, 0, 0);
+               
+                // Einstellungen neu setzen
+                this.canvasEinstellungenSetzen();
+                this.rasterZeichnen();
+            }
+           
+            canvasEinstellungenSetzen() {
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.strokeStyle = this.aktuelleFarbe;
+                this.ctx.lineWidth = this.aktuelleGroesse;
+            }
+           
+            rasterZeichnen() {
+                this.gridCtx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
+               
+                if (this.rasterTyp === 'none') return;
+               
+                this.gridCtx.strokeStyle = this.rasterFarbe;
+                this.gridCtx.lineWidth = 0.5;
+               
+                const breite = this.gridCanvas.width;
+                const hoehe = this.gridCanvas.height;
+               
+                switch (this.rasterTyp) {
+                    case 'lines':
+                        this.liniertesRasterZeichnen(breite, hoehe);
+                        break;
+                    case 'squares':
+                        this.kariertesRasterZeichnen(breite, hoehe);
+                        break;
+                    case 'dots':
+                        this.punktRasterZeichnen(breite, hoehe);
+                        break;
+                }
+            }
+           
+            liniertesRasterZeichnen(breite, hoehe) {
+                this.gridCtx.beginPath();
+                for (let y = this.rasterGroesse; y < hoehe; y += this.rasterGroesse) {
+                    this.gridCtx.moveTo(0, y);
+                    this.gridCtx.lineTo(breite, y);
+                }
+                this.gridCtx.stroke();
+            }
+           
+            kariertesRasterZeichnen(breite, hoehe) {
+                this.gridCtx.beginPath();
+                // Horizontale Linien
+                for (let y = this.rasterGroesse; y < hoehe; y += this.rasterGroesse) {
+                    this.gridCtx.moveTo(0, y);
+                    this.gridCtx.lineTo(breite, y);
+                }
+                // Vertikale Linien
+                for (let x = this.rasterGroesse; x < breite; x += this.rasterGroesse) {
+                    this.gridCtx.moveTo(x, 0);
+                    this.gridCtx.lineTo(x, hoehe);
+                }
+                this.gridCtx.stroke();
+            }
+           
+            punktRasterZeichnen(breite, hoehe) {
+                this.gridCtx.fillStyle = this.rasterFarbe;
+                for (let x = this.rasterGroesse; x < breite; x += this.rasterGroesse) {
+                    for (let y = this.rasterGroesse; y < hoehe; y += this.rasterGroesse) {
+                        this.gridCtx.beginPath();
+                        this.gridCtx.arc(x, y, 1, 0, Math.PI * 2);
+                        this.gridCtx.fill();
+                    }
+                }
+            }
+           
+            eventListenerEinrichten() {
+                // Werkzeugauswahl
+                document.querySelector('.stift').addEventListener('click', () => this.werkzeugSetzen('stift'));
+                document.querySelector('.radierer').addEventListener('click', () => this.werkzeugSetzen('radierer'));
+               
+                // Raster-Steuerung
+                document.querySelectorAll('.grid-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.rasterTypSetzen(e.target.dataset.grid);
+                        this.rasterButtonsAktualisieren(e.target);
+                    });
+                });
+               
+                // Raster-Größe
+                const rasterGroesseSlider = document.getElementById('gridSize');
+                rasterGroesseSlider.addEventListener('input', (e) => {
+                    this.rasterGroesse = parseInt(e.target.value);
+                    document.getElementById('gridSizeDisplay').textContent = this.rasterGroesse;
+                    this.rasterZeichnen();
+                });
+               
+                // Farbauswahl
+                document.querySelectorAll('.clr').forEach(clr => {
+                    clr.addEventListener('click', (e) => {
+                        this.farbeSetzen(e.target.dataset.clr);
+                        this.farbauswahlAktualisieren(e.target);
+                    });
+                });
+               
+                // Benutzerdefinierte Farbe
+                document.getElementById('eigeneFarbe').addEventListener('change', (e) => {
+                    this.farbeSetzen(e.target.value);
+                    this.farbauswahlAktualisieren(null);
+                });
+               
+                // Pinselgröße
+                const pinselGroesse = document.getElementById('pinselGroesse');
+                pinselGroesse.addEventListener('input', (e) => {
+                    this.aktuelleGroesse = parseInt(e.target.value);
+                    document.getElementById('groesseAnzeige').textContent = this.aktuelleGroesse;
+                    if (!this.radiert) {
+                        this.ctx.lineWidth = this.aktuelleGroesse;
+                    }
+                });
+               
+                // Hintergrundfarbe
+                document.getElementById('hintergrundFarbe').addEventListener('change', (e) => {
+                    this.body.style.backgroundColor = e.target.value;
+                });
+               
+                // Canvas-Aktionen
+                document.querySelector('.loeschen').addEventListener('click', () => this.canvasLeeren());
+                document.querySelector('.speichern').addEventListener('click', () => this.zeichnungSpeichern());
+               
+                // Rückgängig/Wiederholen
+                document.getElementById('rueckgaengigBtn').addEventListener('click', () => this.rueckgaengig());
+                document.getElementById('wiederholenBtn').addEventListener('click', () => this.wiederholen());
+               
+                // Zeichenereignisse
+                this.canvas.addEventListener('pointerdown', (e) => this.zeichnenStarten(e));
+                this.canvas.addEventListener('pointermove', (e) => this.zeichnen(e));
+                this.canvas.addEventListener('pointerup', () => this.zeichnenStoppen());
+                this.canvas.addEventListener('pointerout', () => this.zeichnenStoppen());
+               
+                // Tastaturkürzel
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                        if (e.key === 'z' && !e.shiftKey) {
+                            e.preventDefault();
+                            this.rueckgaengig();
+                        } else if (e.key === 'z' && e.shiftKey || e.key === 'y') {
+                            e.preventDefault();
+                            this.wiederholen();
+                        }
+                    }
+                   
+                    // Werkzeugwechsel
+                    if (e.key === 's') this.werkzeugSetzen('stift');
+                    if (e.key === 'r') this.werkzeugSetzen('radierer');
+                   
+                    // Raster-Shortcuts
+                    if (e.key === '1') this.rasterTypSetzen('none');
+                    if (e.key === '2') this.rasterTypSetzen('lines');
+                    if (e.key === '3') this.rasterTypSetzen('squares');
+                    if (e.key === '4') this.rasterTypSetzen('dots');
+                });
+               
+                // Kontextmenü verhindern
+                this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+            }
+           
+            werkzeugSetzen(werkzeug) {
+                this.aktuellesWerkzeug = werkzeug;
+                this.radiert = werkzeug === 'radierer';
+               
+                if (this.radiert) {
+                    this.ctx.globalCompositeOperation = 'destination-out';
+                    this.ctx.lineWidth = 30;
+                    this.canvas.className = 'canvas-radierer';
+                } else {
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.lineWidth = this.aktuelleGroesse;
+                    this.ctx.strokeStyle = this.aktuelleFarbe;
+                    this.canvas.className = 'canvas-stift';
+                }
+               
+                this.werkzeugauswahlAktualisieren();
+            }
+           
+            rasterTypSetzen(typ) {
+                this.rasterTyp = typ;
+                this.rasterZeichnen();
+               
+                // Aktive Button-Auswahl aktualisieren
+                document.querySelectorAll('.grid-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.grid === typ);
+                });
+            }
+           
+            rasterButtonsAktualisieren(selectedElement) {
+                document.querySelectorAll('.grid-btn').forEach(btn => btn.classList.remove('active'));
+                selectedElement.classList.add('active');
+            }
+           
+            farbeSetzen(farbe) {
+                this.aktuelleFarbe = farbe;
+                if (!this.radiert) {
+                    this.ctx.strokeStyle = farbe;
+                }
+                document.getElementById('eigeneFarbe').value = farbe;
+            }
+           
+            farbauswahlAktualisieren(selectedElement) {
+                document.querySelectorAll('.clr').forEach(clr => clr.classList.remove('active'));
+                if (selectedElement) {
+                    selectedElement.classList.add('active');
+                }
+            }
+           
+            werkzeugauswahlAktualisieren() {
+                document.querySelectorAll('.stift, .radierer').forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`.${this.aktuellesWerkzeug}`).classList.add('active');
+            }
+           
+            zeichnenStarten(e) {
+                this.zeichnet = true;
+                this.letzteX = e.offsetX;
+                this.letzteY = e.offsetY;
+               
+                // Druckempfindlichkeit verarbeiten
+                const druck = e.pressure || 1;
+                if (!this.radiert) {
+                    this.ctx.lineWidth = this.aktuelleGroesse * druck;
+                }
+            }
+           
+            zeichnen(e) {
+                if (!this.zeichnet) return;
+               
+                const aktuelleX = e.offsetX;
+                const aktuelleY = e.offsetY;
+               
+                // Druckempfindlichkeit verarbeiten
+                const druck = e.pressure || 1;
+                if (!this.radiert) {
+                    this.ctx.lineWidth = this.aktuelleGroesse * Math.max(0.3, druck);
+                }
+               
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.letzteX, this.letzteY);
+                this.ctx.lineTo(aktuelleX, aktuelleY);
+                this.ctx.stroke();
+               
+                this.letzteX = aktuelleX;
+                this.letzteY = aktuelleY;
+            }
+           
+            zeichnenStoppen() {
+                if (!this.zeichnet) return;
+                this.zeichnet = false;
+                this.statusSpeichern();
+            }
+           
+            statusSpeichern() {
+                this.verlaufSchritt++;
+                if (this.verlaufSchritt < this.verlauf.length) {
+                    this.verlauf.length = this.verlaufSchritt;
+                }
+               
+                this.verlauf.push(this.canvas.toDataURL());
+               
+                if (this.verlauf.length > this.maxVerlaufSchritte) {
+                    this.verlauf.shift();
+                    this.verlaufSchritt--;
+                }
+               
+                this.uiAktualisieren();
+            }
+           
+            rueckgaengig() {
+                if (this.verlaufSchritt > 0) {
+                    this.verlaufSchritt--;
+                    this.statusWiederherstellen();
+                }
+            }
+           
+            wiederholen() {
+                if (this.verlaufSchritt < this.verlauf.length - 1) {
+                    this.verlaufSchritt++;
+                    this.statusWiederherstellen();
+                }
+            }
+           
+            statusWiederherstellen() {
+                const bild = new Image();
+                bild.onload = () => {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.drawImage(bild, 0, 0);
+                };
+                bild.src = this.verlauf[this.verlaufSchritt];
+                this.uiAktualisieren();
+            }
+           
+            uiAktualisieren() {
+                document.getElementById('rueckgaengigBtn').disabled = this.verlaufSchritt <= 0;
+                document.getElementById('wiederholenBtn').disabled = this.verlaufSchritt >= this.verlauf.length - 1;
+            }
+           
+            canvasLeeren() {
+                if (confirm('Möchten Sie wirklich alles löschen?')) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.statusSpeichern();
+                }
+            }
+           
+            zeichnungSpeichern() {
+                const link = document.createElement('a');
+                const jetzt = new Date();
+                const datum = jetzt.toLocaleDateString('de-DE');
+                const zeit = jetzt.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+                link.download = `Notiz_${datum}_${zeit}.png`;
+                link.href = this.canvas.toDataURL();
+                link.click();
+            }
+        }
+       
+        // App initialisieren
+        document.addEventListener('DOMContentLoaded', () => {
+            new NotizenApp();
+        });
+    </script>
+</body>
+</html>
+ 

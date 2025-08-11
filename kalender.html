@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalender</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+  <style>
+    .page-content {
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .calendar {
+      width: 100%;
+      max-width: 600px;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+    }
+    .calendar-day, .calendar-date {
+      text-align: center;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .calendar-day {
+      font-weight: bold;
+      background: #f0f0f0;
+    }
+    .calendar-date {
+      background-color: #e8eaf6;
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+      min-height: 50px;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .calendar-date:hover {
+      background-color: #c5cae9;
+    }
+    .calendar-date.today {
+      background-color: #ffcc80;
+      border: 2px solid #fb8c00;
+    }
+    .calendar-date-number {
+      font-weight: bold;
+      margin-bottom: auto;
+    }
+    .event-indicators {
+      display: flex;
+      justify-content: center;
+      gap: 2px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+      max-width: 100%;
+    }
+    .event-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin: 1px;
+      flex-shrink: 0;
+    }
+    .countdown {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #d32f2f;
+    }
+    .back-button {
+      position: absolute;
+      left: 10px;
+    }
+    #eventsList {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 5px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      background: #fafafa;
+    }
+    #eventsList div {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      background-color: #e0e0e0;
+    }
+    #eventsList div span {
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+    #eventsList div button {
+      background: transparent;
+      border: none;
+      color: #e53935;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 5px;
+      line-height: 1;
+    }
+
+    /* Schöner Lösch-Dialog */
+    .delete-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(3px);
+    }
+    .delete-dialog.show {
+      display: flex;
+    }
+    .delete-dialog-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 420px;
+      margin: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      animation: dialogSlideIn 0.3s ease-out;
+    }
+    @keyframes dialogSlideIn {
+      from {
+        transform: translateY(-30px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    .delete-dialog-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .delete-dialog-subtitle {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .delete-dialog-description {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .delete-dialog-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .delete-dialog-button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .delete-dialog-button.cancel {
+      background: #f5f5f5;
+      color: #666;
+    }
+    .delete-dialog-button.cancel:hover {
+      background: #e0e0e0;
+    }
+    .delete-dialog-button.delete-single {
+      background: #2196f3;
+      color: white;
+    }
+    .delete-dialog-button.delete-single:hover {
+      background: #1976d2;
+    }
+    .delete-dialog-button.delete-all {
+      background: #f44336;
+      color: white;
+    }
+    .delete-dialog-button.delete-all:hover {
+      background: #d32f2f;
+    }
+    .warning-icon {
+      color: #ff9800;
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+  <header class="mdl-layout__header">
+    <div class="mdl-layout__header-row">
+      <button class="mdl-button mdl-js-button mdl-button--icon back-button" onclick="window.location.href='index.html'">
+        <i class="material-icons">arrow_back</i>
+      </button>
+      <span class="mdl-layout-title">Kalender</span>
+    </div>
+  </header>
+
+  <main class="mdl-layout__content">
+    <div class="page-content">
+      <div class="calendar">
+        <div style="margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+          <span><span style="display:inline-block;width:12px;height:12px;background:#7986cb;margin-right:5px;border-radius:2px;"></span>Standard</span>
+          <span><span style="display:inline-block;width:12px;height:12px;background:#e53935;margin-right:5px;border-radius:2px;"></span>Wichtig</span>
+          <span><span style="display:inline-block;width:12px;height:12px;background:#43a047;margin-right:5px;border-radius:2px;"></span>Prüfung</span>
+        </div>        
+        <div class="calendar-header">
+          <button class="mdl-button" onclick="changeMonth(-1)">❮</button>
+          <h5 id="monthYear"></h5>
+          <button class="mdl-button" onclick="changeMonth(1)">❯</button>
+        </div>
+        <div class="calendar-grid" id="calendar-days"></div>
+        <div class="calendar-grid" id="calendar-dates"></div>
+        <div id="countdown" class="countdown"></div>
+        <div id="reminder" style="margin-top: 10px; color: #388e3c;"></div>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="eventDialog">
+    <form method="dialog" id="eventForm" style="display: flex; flex-direction: column; gap: 10px; min-width: 300px;">
+      <h4 id="dialogTitle">Neues Ereignis</h4>
+
+      <div id="eventsList"></div>
+
+      <input type="text" id="eventTitle" placeholder="Titel"  />
+      <select id="eventType">
+        <option value="default">Standard</option>
+        <option value="wichtig">Wichtig</option>
+        <option value="prüfung">Prüfung</option>
+      </select>
+      <label><input type="checkbox" id="weeklyRepeat" /> Wöchentlich wiederholen</label>
+      <div style="display: flex; justify-content: space-between; gap: 10px;">
+        <button type="button" onclick="addEvent()">+ Ereignis hinzufügen</button>
+        <div>
+          <button type="button" onclick="closeDialog()">Abbrechen</button>
+          <button type="submit">Speichern</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Schöner Lösch-Dialog -->
+  <div id="deleteDialog" class="delete-dialog">
+    <div class="delete-dialog-content">
+      <div class="delete-dialog-title">
+        <i class="material-icons warning-icon">warning</i>
+        Wöchentliches Ereignis löschen
+      </div>
+      <div class="delete-dialog-subtitle" id="deleteEventTitle"></div>
+      <div class="delete-dialog-description">
+        Dieses Ereignis wiederholt sich wöchentlich. Möchten Sie nur dieses eine Ereignis löschen oder alle wiederholten Ereignisse?
+      </div>
+      <div class="delete-dialog-buttons">
+        <button class="delete-dialog-button cancel" onclick="closeDeleteDialog()">
+          Abbrechen
+        </button>
+        <button class="delete-dialog-button delete-single" onclick="confirmDeleteSingle()">
+          Nur dieses löschen
+        </button>
+        <button class="delete-dialog-button delete-all" onclick="confirmDeleteAll()">
+          Alle löschen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const days = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni",
+                      "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  let currentDate = new Date();
+
+  const eventColors = {
+    default: "#7986cb",
+    wichtig: "#e53935",
+    prüfung: "#43a047"
+  };
+
+  let selectedDateKey = "";
+  let eventsForSelectedDate = [];
+  let eventToDelete = null;
+  let eventIndexToDelete = null;
+
+  function formatDateKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  }
+
+  function openDialog(dateKey) {
+    selectedDateKey = dateKey;
+    eventsForSelectedDate = JSON.parse(localStorage.getItem(dateKey) || "[]");
+
+    document.getElementById("dialogTitle").textContent = `Ereignisse für den ${dateKey}`;
+    document.getElementById("eventsList").innerHTML = "";
+
+    if(eventsForSelectedDate.length === 0) {
+      document.getElementById("eventTitle").value = "";
+      document.getElementById("eventType").value = "default";
+      document.getElementById("weeklyRepeat").checked = false;
+    } else {
+      const lastEvent = eventsForSelectedDate[eventsForSelectedDate.length -1];
+      document.getElementById("eventTitle").value = lastEvent.title;
+      document.getElementById("eventType").value = lastEvent.type;
+      document.getElementById("weeklyRepeat").checked = lastEvent.repeat || false;
+    }
+
+    renderEventsList();
+    document.getElementById("eventDialog").showModal();
+  }
+
+  function renderEventsList() {
+    const listEl = document.getElementById("eventsList");
+    listEl.innerHTML = "";
+
+    eventsForSelectedDate.forEach((ev, idx) => {
+      const evDiv = document.createElement("div");
+
+      const colorBox = document.createElement("span");
+      colorBox.className = "event-dot";
+      colorBox.style.backgroundColor = eventColors[ev.type] || eventColors.default;
+      colorBox.style.width = "12px";
+      colorBox.style.height = "12px";
+      evDiv.appendChild(colorBox);
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = ev.title + (ev.repeat ? " (wöchentlich)" : "");
+      evDiv.appendChild(textSpan);
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "✕";
+      delBtn.title = "Ereignis löschen";
+      delBtn.onclick = () => {
+        if(ev.repeat) {
+          showDeleteDialog(ev, idx);
+        } else {
+          eventsForSelectedDate.splice(idx, 1);
+          renderEventsList();
+        }
+      };
+      evDiv.appendChild(delBtn);
+
+      listEl.appendChild(evDiv);
+    });
+  }
+
+  function showDeleteDialog(event, index) {
+    eventToDelete = event;
+    eventIndexToDelete = index;
+    document.getElementById("deleteEventTitle").textContent = `"${event.title}"`;
+    document.getElementById("deleteDialog").classList.add("show");
+  }
+
+  function closeDeleteDialog() {
+    document.getElementById("deleteDialog").classList.remove("show");
+    eventToDelete = null;
+    eventIndexToDelete = null;
+  }
+
+  function confirmDeleteSingle() {
+    if (eventToDelete && eventIndexToDelete !== null) {
+      // Nur aus der aktuellen Liste entfernen
+      eventsForSelectedDate.splice(eventIndexToDelete, 1);
+      // Sofort im localStorage speichern
+      localStorage.setItem(selectedDateKey, JSON.stringify(eventsForSelectedDate));
+      renderEventsList();
+      renderCalendar();
+    }
+    closeDeleteDialog();
+  }
+
+  function confirmDeleteAll() {
+    if (eventToDelete) {
+      deleteAllRepeatedEvents(eventToDelete);
+    }
+    closeDeleteDialog();
+  }
+
+  function deleteAllRepeatedEvents(eventToDelete) {
+    // Lösche das Event aus allen Tagen (12 Wochen voraus und rückwärts, INKLUSIVE heute)
+    const baseDateParts = selectedDateKey.split("-").map(Number);
+    const baseDate = new Date(baseDateParts[0], baseDateParts[1] - 1, baseDateParts[2]);
+    
+    for(let i = -12; i <= 12; i++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i * 7);
+      const key = formatDateKey(d);
+      
+      let eventsOnDate = JSON.parse(localStorage.getItem(key) || "[]");
+      const filteredEvents = eventsOnDate.filter(ev => 
+        !(ev.title === eventToDelete.title && ev.repeat === eventToDelete.repeat)
+      );
+      
+      if(filteredEvents.length === 0) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, JSON.stringify(filteredEvents));
+      }
+    }
+    
+    // Aktualisiere auch die lokale Liste für den aktuellen Tag
+    eventsForSelectedDate = eventsForSelectedDate.filter(ev => 
+      !(ev.title === eventToDelete.title && ev.repeat === eventToDelete.repeat)
+    );
+    
+    renderEventsList();
+    renderCalendar();
+  }
+
+  function addEvent() {
+    const title = document.getElementById("eventTitle").value.trim();
+    if(!title) {
+      alert("Bitte gib einen Titel ein.");
+      return;
+    }
+    const type = document.getElementById("eventType").value;
+    const repeat = document.getElementById("weeklyRepeat").checked;
+
+    // Keine doppelten Titel erlauben
+    if(eventsForSelectedDate.some(ev => ev.title === title && ev.repeat === repeat)) {
+      alert("Dieses Ereignis wurde schon hinzugefügt.");
+      return;
+    }
+
+    eventsForSelectedDate.push({ title, type, repeat });
+    renderEventsList();
+
+    // Felder leeren
+    document.getElementById("eventTitle").value = "";
+    document.getElementById("eventType").value = "default";
+    document.getElementById("weeklyRepeat").checked = false;
+  }
+
+  document.getElementById("eventForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    // Speichern aller Ereignisse, inklusive Wiederholungen
+    if(eventsForSelectedDate.some(ev => ev.repeat)) {
+      const baseDateParts = selectedDateKey.split("-").map(Number);
+      const baseDate = new Date(baseDateParts[0], baseDateParts[1] - 1, baseDateParts[2]);
+
+      for(let i = 0; i < 12; i++) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + i * 7);
+        const key = formatDateKey(d);
+        let eventsOnDate = JSON.parse(localStorage.getItem(key) || "[]");
+
+        const repeatedEvents = eventsForSelectedDate.filter(ev => ev.repeat);
+        const nonRepeatedEvents = i === 0 ? eventsForSelectedDate.filter(ev => !ev.repeat) : [];
+
+        // Alte Einträge mit gleichen Titel+repeat entfernen, um Duplikate zu vermeiden
+        eventsOnDate = eventsOnDate.filter(ev =>
+          ![...repeatedEvents, ...nonRepeatedEvents].some(newEv => newEv.title === ev.title && newEv.repeat === ev.repeat)
+        );
+
+        const combined = [...eventsOnDate, ...repeatedEvents, ...nonRepeatedEvents];
+
+        localStorage.setItem(key, JSON.stringify(combined));
+      }
+    } else {
+      // Kein Wiederholungs-Ereignis, einfach speichern
+      localStorage.setItem(selectedDateKey, JSON.stringify(eventsForSelectedDate));
+    }
+
+    document.getElementById("eventDialog").close();
+    renderCalendar();
+  });
+
+  function closeDialog() {
+    document.getElementById("eventDialog").close();
+  }
+
+  function changeMonth(delta) {
+    currentDate.setMonth(currentDate.getMonth() + delta);
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    document.getElementById("monthYear").textContent = `${monthNames[month]} ${year}`;
+
+    // Wochentage anzeigen
+    const daysContainer = document.getElementById("calendar-days");
+    daysContainer.innerHTML = "";
+    days.forEach(day => {
+      const el = document.createElement("div");
+      el.className = "calendar-day";
+      el.textContent = day;
+      daysContainer.appendChild(el);
+    });
+
+    // Tage im Monat anzeigen
+    const datesContainer = document.getElementById("calendar-dates");
+    datesContainer.innerHTML = "";
+
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+
+    const startDay = firstDayOfMonth.getDay();
+
+    // Leere Felder vor dem ersten Tag
+    for(let i = 0; i < startDay; i++) {
+      const emptyEl = document.createElement("div");
+      emptyEl.className = "calendar-date";
+      datesContainer.appendChild(emptyEl);
+    }
+
+    const todayKey = formatDateKey(new Date());
+
+    // Tage des Monats
+    for(let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+      const date = new Date(year, month, day);
+      const dateKey = formatDateKey(date);
+
+      const dateEl = document.createElement("div");
+      dateEl.className = "calendar-date";
+      if(dateKey === todayKey) {
+        dateEl.classList.add("today");
+      }
+
+      // Datum als Nummer oben
+      const dateNumber = document.createElement("div");
+      dateNumber.className = "calendar-date-number";
+      dateNumber.textContent = day;
+      dateEl.appendChild(dateNumber);
+
+      // Event-Indikatoren unten
+      const events = JSON.parse(localStorage.getItem(dateKey) || "[]");
+      if(events.length > 0) {
+        const indicatorsContainer = document.createElement("div");
+        indicatorsContainer.className = "event-indicators";
+        
+        // Maximal 5 Punkte anzeigen, bei mehr Events einen "+" zeigen
+        const maxDots = 5;
+        const eventsToShow = events.slice(0, maxDots);
+        
+        eventsToShow.forEach(ev => {
+          const dot = document.createElement("span");
+          dot.className = "event-dot";
+          dot.style.backgroundColor = eventColors[ev.type] || eventColors.default;
+          dot.title = ev.title + (ev.repeat ? " (wöchentlich)" : "");
+          indicatorsContainer.appendChild(dot);
+        });
+
+        // Wenn mehr als 5 Events, zeige "+"
+        if(events.length > maxDots) {
+          const moreDot = document.createElement("span");
+          moreDot.textContent = "+";
+          moreDot.style.fontSize = "10px";
+          moreDot.style.color = "#666";
+          moreDot.style.fontWeight = "bold";
+          moreDot.title = `${events.length - maxDots} weitere Ereignisse`;
+          indicatorsContainer.appendChild(moreDot);
+        }
+        
+        dateEl.appendChild(indicatorsContainer);
+      }
+
+      dateEl.addEventListener("click", () => openDialog(dateKey));
+      datesContainer.appendChild(dateEl);
+    }
+
+    updateCountdown();
+  }
+
+  function updateCountdown() {
+    const countdownEl = document.getElementById("countdown");
+    const reminderEl = document.getElementById("reminder");
+    const today = new Date();
+
+    let nextEventDate = null;
+    let nextEvents = [];
+
+    // Suche nächstes Ereignis (egal welcher Typ)
+    for(let i = 0; i < 365; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() + i);
+      const key = formatDateKey(checkDate);
+      const events = JSON.parse(localStorage.getItem(key) || "[]");
+      
+      // Suche erstes beliebiges Ereignis (falls noch keines gefunden)
+      if(!nextEventDate && events.length > 0) {
+        nextEventDate = checkDate;
+        nextEvents = events;
+        break; // Sobald wir Ereignisse gefunden haben, können wir aufhören
+      }
+    }
+
+    // Zeige alle Ereignisse des nächsten Tages an
+    if(nextEventDate && nextEvents.length > 0) {
+      const diffMs = nextEventDate.getTime() - today.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      // Erstelle Text für alle Ereignisse
+      const eventTitles = nextEvents.map(ev => ev.title).join(", ");
+      
+      if(diffDays === 0) {
+        countdownEl.textContent = `Heute: ${eventTitles}`;
+      } else if(diffDays === 1) {
+        countdownEl.textContent = `Morgen: ${eventTitles}`;
+      } else {
+        countdownEl.textContent = `${eventTitles} in ${diffDays} Tag(en)`;
+      }
+      
+      if(diffDays <= 7) {
+        // Prüfe ob Prüfungen dabei sind für speziellen Text
+        const hasExams = nextEvents.some(ev => ev.type === "prüfung");
+        const examEvents = nextEvents.filter(ev => ev.type === "prüfung");
+        const otherEvents = nextEvents.filter(ev => ev.type !== "prüfung");
+        
+        if(diffDays === 0) {
+          if(hasExams && otherEvents.length > 0) {
+            // Prüfungen und andere Ereignisse
+            reminderEl.textContent = examEvents.length === 1 ? 
+              `Heute ist deine Prüfung und weitere Termine! Viel Erfolg!` :
+              `Heute sind deine Prüfungen und weitere Termine! Viel Erfolg!`;
+          } else if(hasExams) {
+            // Nur Prüfungen
+            reminderEl.textContent = examEvents.length === 1 ? 
+              "Heute ist deine Prüfung! Viel Erfolg!" : 
+              "Heute sind deine Prüfungen! Viel Erfolg!";
+          } else {
+            // Nur andere Ereignisse
+            reminderEl.textContent = nextEvents.length === 1 ? 
+              `Heute steht an: ${eventTitles}` : 
+              `Heute stehen an: ${eventTitles}`;
+          }
+        } else if(diffDays === 1) {
+          if(hasExams && otherEvents.length > 0) {
+            // Prüfungen und andere Ereignisse
+            reminderEl.textContent = examEvents.length === 1 ? 
+              `Morgen ist deine Prüfung und weitere Termine! Viel Erfolg!` :
+              `Morgen sind deine Prüfungen und weitere Termine! Viel Erfolg!`;
+          } else if(hasExams) {
+            // Nur Prüfungen
+            reminderEl.textContent = examEvents.length === 1 ? 
+              "Morgen ist deine Prüfung! Viel Erfolg!" : 
+              "Morgen sind deine Prüfungen! Viel Erfolg!";
+          } else {
+            // Nur andere Ereignisse
+            reminderEl.textContent = nextEvents.length === 1 ? 
+              `Morgen steht an: ${eventTitles}` : 
+              `Morgen stehen an: ${eventTitles}`;
+          }
+        } else {
+          if(hasExams && otherEvents.length > 0) {
+            // Prüfungen und andere Ereignisse
+            reminderEl.textContent = examEvents.length === 1 ? 
+              `Diese Woche hast du eine Prüfung und weitere Termine! Viel Erfolg!` :
+              `Diese Woche hast du Prüfungen und weitere Termine! Viel Erfolg!`;
+          } else if(hasExams) {
+            // Nur Prüfungen
+            reminderEl.textContent = examEvents.length === 1 ? 
+              `Diese Woche hast du eine Prüfung: ${examEvents.map(ev => ev.title).join(", ")}! Viel Erfolg!` :
+              `Diese Woche hast du Prüfungen: ${examEvents.map(ev => ev.title).join(", ")}! Viel Erfolg!`;
+          } else {
+            // Nur andere Ereignisse
+            reminderEl.textContent = nextEvents.length === 1 ? 
+              `Diese Woche steht an: ${eventTitles}` : 
+              `Diese Woche stehen an: ${eventTitles}`;
+          }
+        }
+      } else {
+        reminderEl.textContent = "";
+      }
+    } else {
+      countdownEl.textContent = "";
+      reminderEl.textContent = "";
+    }
+  }
+
+  // Schließe Dialog beim Klicken außerhalb
+  document.getElementById("deleteDialog").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("deleteDialog")) {
+      closeDeleteDialog();
+    }
+  });
+
+  renderCalendar();
+</script>
+</body>
+</html>

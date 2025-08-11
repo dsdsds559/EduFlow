@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ToDo-Liste</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+  <style>
+    .page-content {
+      padding: 50px 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .todo-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mdl-textfield {
+      width: 250px;
+    }
+
+    .mdl-button {
+      height: 40px;
+    }
+
+    .demo-list-control {
+      width: 100%;
+      max-width: 300px;
+      text-align: left;
+    }
+
+    .completed .todo-text {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .todo-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .delete-btn {
+      cursor: pointer;
+      color: #3f51b5;
+      transition: color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      color: red;
+    }
+
+    .mdl-layout__header-row {
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <button class="mdl-button mdl-js-button mdl-button--icon" onclick="window.location.href='todos.html'">
+          <i class="material-icons">arrow_back</i>
+        </button>
+        <span class="mdl-layout-title">ToDo-Liste</span>
+        <div class="mdl-layout-spacer"></div>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <div class="page-content">
+        <form onsubmit="event.preventDefault(); addToDo();">
+          <div class="todo-input-wrapper">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" type="text" id="todofield" />
+              <label class="mdl-textfield__label" for="todofield">ToDo hinzufügen</label>
+            </div>
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Speichern
+            </button>
+          </div>
+        </form>
+
+        <ul class="demo-list-control mdl-list" id="todolist"></ul>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const listName = params.get('name') || 'default';
+    const listId = `todos_${listName}`;
+
+    document.addEventListener("DOMContentLoaded", loadToDos);
+
+    function addToDo() {
+      const todofield = document.getElementById("todofield");
+      const todoText = todofield.value.trim();
+
+      if (todoText !== "") {
+        const newToDo = { text: todoText, completed: false };
+        addToDoElement(newToDo);
+        saveToDo(newToDo);
+        todofield.value = "";
+      }
+    }
+
+    function addToDoElement(todo) {
+      const todolist = document.getElementById("todolist");
+
+      const li = document.createElement("li");
+      li.classList.add("mdl-list__item");
+      if (todo.completed) {
+        li.classList.add("completed");
+      }
+
+      li.innerHTML = `
+        <span class="mdl-list__item-primary-content todo-text">
+          <i class="material-icons mdl-list__item-avatar">${todo.completed ? "assignment_turned_in" : "assignment"}</i>
+          ${todo.text}
+        </span>
+        <span class="mdl-list__item-secondary-action todo-actions">
+          <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect">
+            <input type="checkbox" class="mdl-checkbox__input" ${todo.completed ? "checked" : ""} />
+          </label>
+          <i class="material-icons delete-btn">delete</i>
+        </span>
+      `;
+
+      const checkbox = li.querySelector(".mdl-checkbox__input");
+      const icon = li.querySelector(".mdl-list__item-avatar");
+
+      checkbox.addEventListener("change", function () {
+        todo.completed = checkbox.checked;
+        icon.textContent = todo.completed ? "assignment_turned_in" : "assignment";
+        li.classList.toggle("completed", todo.completed);
+        updateToDoStatus(todo.text, todo.completed);
+      });
+
+      const deleteBtn = li.querySelector(".delete-btn");
+      deleteBtn.addEventListener("click", () => {
+        li.remove();
+        deleteToDo(todo.text);
+      });
+
+      todolist.appendChild(li);
+    }
+
+    function saveToDo(todo) {
+      let todos = JSON.parse(localStorage.getItem(listId)) || [];
+      todos.push(todo);
+      localStorage.setItem(listId, JSON.stringify(todos));
+    }
+
+    function loadToDos() {
+      let todos = JSON.parse(localStorage.getItem(listId)) || [];
+      todos.forEach(todo => {
+        if (todo.text) {
+          addToDoElement(todo);
+        }
+      });
+    }
+
+    function updateToDoStatus(todoText, completed) {
+      let todos = JSON.parse(localStorage.getItem(listId)) || [];
+      todos = todos.map(todo => todo.text === todoText ? { text: todo.text, completed } : todo);
+      localStorage.setItem(listId, JSON.stringify(todos));
+    }
+
+    function deleteToDo(todoText) {
+      let todos = JSON.parse(localStorage.getItem(listId)) || [];
+      todos = todos.filter(todo => todo.text !== todoText);
+      localStorage.setItem(listId, JSON.stringify(todos));
+    }
+  </script>
+</body>
+</html>

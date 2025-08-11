@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />  
+    <title>EduFlow</title>
+    
+    <!-- Material Design Lite (MDL) CSS -->
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+    <!-- MDL JavaScript -->
+    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+    <style>
+        .icon-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 80px 100px;
+            margin-top: 100px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .icon-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 120px;
+        }
+
+        .icon {
+            font-size: 120px;
+            color: #3f51b5;
+            transition: transform 0.3s ease-in-out;
+            cursor: pointer;
+        }
+
+        .icon:hover {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed:', err));
+    }
+  </script>
+  
+<body>
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+        <header class="mdl-layout__header">
+            <div class="mdl-layout__header-row">
+              <div class="header-logo-container" style="display:flex; align-items:center; gap:8px;">
+                <img src="Bildschirmfoto 2025-08-11 um 15.36.21.png" alt="EduFlow Logo" style="height:40px; width:auto;" />
+                <span class="mdl-layout-title" style="margin:0;">EduFlow</span>
+              </div>
+              <div class="mdl-layout-spacer"></div>
+              <!-- Navigation hier, falls gewünscht -->
+            </div>
+          </header>
+
+        <!-- Drawer entfernt komplett -->
+
+        <main class="mdl-layout__content">
+            <div class="page-content">
+                <div class="icon-container">
+                    <!-- Erste Zeile -->
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='kalender.html'">calendar_month</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='kalender.html'">Kalender</button>
+                    </div>
+                    
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='todos.html'">assignment_turned_in</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='todos.html'">ToDo-Liste</button>
+                    </div>
+                    
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='notizen.html'">description</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='notizen.html'">Notizen</button>
+                    </div>
+
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='pruefungen.html'">assignment</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='pruefungen.html'">Prüfungen</button>
+                    </div>
+
+                    <!-- Zweite Zeile -->
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='timer.html'">av_timer</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='timer.html'">Timer</button>
+                    </div>
+
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='tagebuch.html'">menu_book</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='tagebuch.html'">Tagebuch</button>
+                    </div>
+
+                    <!-- Neue Kachel: Mindmaps -->
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='mindmaps.html'">account_tree</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='mindmaps.html'">Mindmaps</button>
+                    </div>
+
+                    <!-- Neue Kachel: Karteien -->
+                    <div class="icon-wrapper">
+                        <span class="material-icons icon" onclick="window.location.href='karteien.html'">quiz</span>
+                        <button class="mdl-button mdl-js-button mdl-button--primary" onclick="window.location.href='karteien.html'">Karteikarten</button>
+                    </div>
+
+                    <!-- Optionaler Platzhalter -->
+                    <div class="icon-wrapper"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyCWu_c37ViRWkhEfsxESE2uR6QmyltZwvM",
+        authDomain: "schulapp-ac66e.firebaseapp.com",
+        projectId: "schulapp-ac66e",
+        storageBucket: "schulapp-ac66e.firebasestorage.app",
+        messagingSenderId: "294070678768",
+        appId: "1:294070678768:web:b96de4eb97873b64163e35",
+        measurementId: "G-GNE29NZYQB"
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      firebase.analytics();
+
+      const messaging = firebase.messaging();
+
+      messaging.requestPermission()
+        .then(() => {
+          console.log("✅ Benachrichtigungsberechtigung erteilt");
+          return messaging.getToken({ vapidKey: "BKiYxO7VFlbgwwN29MoMxBVtKvaIaMGRd3_rq73gFr42BHvkJ_YZ2awWkR0QQvmIEIbwFWp_zdZMErLvSPIRLKQ" });
+        })
+        .then((token) => {
+          console.log("📬 FCM Token:", token);
+        })
+        .catch((err) => {
+          console.error("❌ Fehler bei Berechtigungsanfrage:", err);
+        });
+
+      messaging.onMessage((payload) => {
+        console.log("📩 Nachricht erhalten:", payload);
+        alert(`Neue Nachricht: ${payload.notification.title} - ${payload.notification.body}`);
+      });
+    </script>
+</body>
+</html>

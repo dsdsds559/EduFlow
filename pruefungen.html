@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prüfungen</title>
+
+  <!-- Material Design Lite CSS -->
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+  <!-- MDL JS -->
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+  <style>
+    .prüfungen-wrapper {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1.5rem;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      color: #3f51b5;
+      margin-bottom: 2rem;
+    }
+
+    .prüfung-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-left: 5px solid #3f51b5;
+      background: #f9f9f9;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .prüfung-item:hover {
+      background: #e8eaf6;
+    }
+
+    .prüfung-title {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #3f51b5;
+    }
+
+    .prüfung-date {
+      font-size: 0.95rem;
+      color: #555;
+    }
+
+    #no-exams {
+      text-align: center;
+      color: #888;
+      font-style: italic;
+      margin-top: 2rem;
+    }
+
+    .back-button {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: white;
+      font-size: 1.5rem;
+      margin-right: auto;
+    }
+
+    .back-button i {
+      margin-right: 2rem; /* größerer Abstand zwischen Pfeil und Text */
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <a href="index.html" class="back-button">
+          <i class="material-icons">arrow_back</i>
+          <span>Prüfungen</span>
+        </a>
+        <div class="mdl-layout-spacer"></div>
+        <span class="mdl-layout-title"></span>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <div class="page-content">
+        <div class="prüfungen-wrapper">
+          <h2>Alle Prüfungen</h2>
+          <div id="prüfungen-container"></div>
+          <div id="no-exams" style="display: none;">Keine Prüfungen gefunden.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function formatDate(date) {
+      const d = date.getDate().toString().padStart(2, '0');
+      const m = (date.getMonth() + 1).toString().padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}.${m}.${y}`;
+    }
+
+    function loadAllExams() {
+      const exams = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(key)) {
+          const events = JSON.parse(localStorage.getItem(key)) || [];
+          events.forEach(ev => {
+            if (ev.type === "prüfung") {
+              exams.push({
+                title: ev.title,
+                dateKey: key,
+                date: new Date(key),
+                repeat: ev.repeat || false
+              });
+            }
+          });
+        }
+      }
+      return exams;
+    }
+
+    function renderExams() {
+      const container = document.getElementById('prüfungen-container');
+      container.innerHTML = '';
+
+      let exams = loadAllExams();
+
+      if (exams.length === 0) {
+        document.getElementById('no-exams').style.display = 'block';
+        return;
+      } else {
+        document.getElementById('no-exams').style.display = 'none';
+      }
+
+      exams.sort((a, b) => a.date - b.date);
+
+      exams.forEach(exam => {
+        const examEl = document.createElement('div');
+        examEl.className = 'prüfung-item';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'prüfung-title';
+        titleEl.textContent = exam.title;
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'prüfung-date';
+        dateEl.textContent = formatDate(exam.date);
+
+        examEl.appendChild(titleEl);
+        examEl.appendChild(dateEl);
+
+        container.appendChild(examEl);
+      });
+    }
+
+    renderExams();
+  </script>
+
+</body>
+</html>

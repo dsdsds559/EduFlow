@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mindmaps</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+  <style>
+    .page-content {
+      padding: 50px 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mdl-textfield {
+      width: 250px;
+    }
+
+    .mdl-button {
+      height: 40px;
+    }
+
+    .mdl-list {
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+    }
+
+    .delete-btn {
+      cursor: pointer;
+      color: #3f51b5;
+      transition: color 0.3s ease;
+    }
+
+    .delete-btn:hover {
+      color: red;
+    }
+
+    .mdl-list__item {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 2px solid #3f51b5;
+      border-radius: 6px;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .mdl-list__item:hover {
+      background-color: #e8eaf6;
+      box-shadow: 0 2px 6px rgba(63,81,181,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <button class="mdl-button mdl-js-button mdl-button--icon" onclick="window.location.href='index.html'" title="Zurück zur Startseite">
+          <i class="material-icons">arrow_back</i>
+        </button>
+        <span class="mdl-layout-title" style="margin-left: 10px;">Mindmaps</span>
+        <div class="mdl-layout-spacer"></div>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <div class="page-content">
+        <form onsubmit="event.preventDefault(); addMindmap();">
+          <div class="input-wrapper">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" type="text" id="mindmapname" />
+              <label class="mdl-textfield__label" for="mindmapname">Neue Mindmap erstellen</label>
+            </div>
+            <button type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">
+              Anlegen
+            </button>
+          </div>
+        </form>
+
+        <ul class="mdl-list" id="mindmaplist"></ul>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const storageKey = "mindmaps";
+
+    document.addEventListener("DOMContentLoaded", loadMindmaps);
+
+    function loadMindmaps() {
+      let maps = JSON.parse(localStorage.getItem(storageKey)) || [];
+      const list = document.getElementById("mindmaplist");
+      list.innerHTML = "";
+
+      maps.forEach(name => {
+        const li = document.createElement("li");
+        li.className = "mdl-list__item";
+
+        const icon = document.createElement("i");
+        icon.className = "material-icons";
+        icon.style.color = "#3f51b5";
+        icon.style.marginRight = "10px";
+        icon.textContent = "account_tree";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = name;
+        nameSpan.style.flexGrow = "1";
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "material-icons delete-btn";
+        deleteIcon.title = "Löschen";
+        deleteIcon.textContent = "delete";
+
+        li.addEventListener("click", () => {
+          window.location.href = `mindmapeditor.html?name=${encodeURIComponent(name)}`;
+        });
+
+        deleteIcon.addEventListener("click", e => {
+          e.stopPropagation();
+          deleteMindmap(name);
+        });
+
+        li.appendChild(icon);
+        li.appendChild(nameSpan);
+        li.appendChild(deleteIcon);
+
+        list.appendChild(li);
+      });
+    }
+
+    function addMindmap() {
+      const input = document.getElementById("mindmapname");
+      const name = input.value.trim();
+      if (!name) return;
+
+      let maps = JSON.parse(localStorage.getItem(storageKey)) || [];
+
+      if (maps.includes(name)) {
+        alert("Eine Mindmap mit diesem Namen existiert bereits.");
+        return;
+      }
+
+      maps.push(name);
+      localStorage.setItem(storageKey, JSON.stringify(maps));
+
+      input.value = "";
+      loadMindmaps();
+    }
+
+    function deleteMindmap(name) {
+      let maps = JSON.parse(localStorage.getItem(storageKey)) || [];
+      maps = maps.filter(m => m !== name);
+      localStorage.setItem(storageKey, JSON.stringify(maps));
+
+      // Einzelne gespeicherte Map-Daten löschen
+      localStorage.removeItem(`mindmapdata_${name}`);
+
+      loadMindmaps();
+    }
+  </script>
+</body>
+</html>
